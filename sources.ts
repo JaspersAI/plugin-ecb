@@ -1,9 +1,6 @@
 import { defineSource } from '@jaspers-ai/sdk'
 import { z } from 'zod'
 
-// The published SDK types a source's arguments as unknown, since from there it cannot see the
-// schema beside them. Each run names what its own input parses to.
-type Args = Record<string, any>
 
 // The European Central Bank's data portal. No key. Euro area reference rates and policy rates, in
 // SDMX-JSON, which puts its numbers in one object and their dates in another.
@@ -43,8 +40,7 @@ export const fx = defineSource({
     currency: z.string().default('USD').describe('A three letter currency code.'),
     days: z.number().int().min(1).max(10000).default(250),
   }),
-  async run(raw, ctx) {
-    const { currency, days } = raw as Args
+  async run({ currency, days }, ctx) {
     const code = currency.trim().toUpperCase()
     const rows = await read(ctx, `EXR/D.${code}.EUR.SP00.A`, `lastNObservations=${days}`)
     return { pair: `EUR/${code}`, rows: rows.map((one) => ({ date: one.date, pair: `EUR/${code}`, rate: one.value })) }
@@ -55,8 +51,7 @@ export const policyRate = defineSource({
   description: 'The ECB deposit facility rate, the euro area policy rate, every time it changed.',
   hosts: [HOST],
   input: z.object({ days: z.number().int().min(1).max(10000).default(400) }),
-  async run(raw, ctx) {
-    const { days } = raw as Args
+  async run({ days }, ctx) {
     const rows = await read(ctx, 'FM/D.U2.EUR.4F.KR.DFR.LEV', `lastNObservations=${days}`)
     return { rows: rows.map((one) => ({ date: one.date, rate: one.value })) }
   },
